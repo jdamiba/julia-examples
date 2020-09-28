@@ -1,0 +1,16 @@
+using Plots
+
+function count_fractions()
+    counter = 0
+    for i in 1:100
+        for j in 1:10
+            println(i//j)
+        end
+    end
+end
+
+fractions = [i//j^8 for i in 1:10 for j in 1:10]
+
+fractions
+
+plot(fractions, legend=false)

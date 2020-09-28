@@ -1,39 +1,85 @@
 using Metalhead
 using Metalhead: classify
-using Images
-using Dash
-using DashHtmlComponents
-using DashCoreComponents
+using Images, Dash, DashHtmlComponents, DashCoreComponents
+
 
 vgg = VGG19()
-#densenet = DenseNet()
-#resnet = ResNet()
-#googlenet = GoogleNet()
-#squeezenet = SqueezeNet()
+densenet = DenseNet()
+resnet = ResNet()
+squeezenet = SqueezeNet()
 
-function classify_image(url)
+default_model = vgg
+
+default_image_url = "https://upload.wikimedia.org/wikipedia/commons/6/66/Polar_Bear_-_Alaska_%28cropped%29.jpg"
+
+function classify_image(url, model)
     download(url, "image.jpg")
 
     image = load("image.jpg")
 
-    classify(vgg, image)
+    return classify(model, image)
 end
 
-app = dash(external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"])
+app = dash()
 
 app.layout = html_div() do
-    html_div("enter image url"),
-    dcc_input(id = "url", value="https://upload.wikimedia.org/wikipedia/commons/6/66/Polar_Bear_-_Alaska_%28cropped%29.jpg"),
+    html_div("select a model", style = (paddingBottom = "10px",)),
+    dcc_dropdown(
+        id = "dropdown",
+        style = (width = "150px", marginBottom = "10px"),
+        options = [
+            (label = "vgg", value = "vgg"),
+            (label = "densenet", value = "densenet"),
+            (label = "resnet", value = "resnet"),
+            (label = "squeezenet", value = "squeezenet"),
+        ],
+        value="vgg"
+    ),
+    html_div("enter image url", style = (paddingBottom = "10px",)),
+    dcc_input(
+        style = (width = "400px", marginBottom = "40px",),
+        id = "url",
+        value = default_image_url,
+    ),
     html_br(),
-    html_img(id="img", height="50%", width="50%", src="https://upload.wikimedia.org/wikipedia/commons/6/66/Polar_Bear_-_Alaska_%28cropped%29.jpg"),
+    html_img(
+        style = (marginBottom = "40px",),
+        id = "img",
+        height = "30%",
+        width = "30%",
+        src = default_image_url,
+    ),
     html_br(),
-    html_div(id = "output")
+    dcc_loading(html_div(id = "output"))
 end
 
-callback!(app, Output("img", "src"), Output("output", "children"), Input("url", "value")) do input_value
-    vgg_prediction = classify_image(input_value)
-    return input_value, "$vgg_prediction"
-    # return classify_image(input_value)
+callback!(
+    app,
+    Output("img", "src"),
+    Output("output", "children"),
+    Input("url", "value"),
+    Input("dropdown", "value"),
+) do image_url, currently_selected_model
+
+    model = default_model
+
+    if image_url == ""
+        image_url = default_image_url
+    end
+
+    if currently_selected_model == "vgg"
+        model = vgg
+    elseif currently_selected_model == "densenet"
+        model = densenet
+    elseif currently_selected_model == "resnet"
+        model = resnet
+    elseif currently_selected_model == "squeezenet"
+        model = squeezenet
+    end
+
+    prediction = classify_image(image_url, model)
+
+    return image_url, "$currently_selected_model thinks the image contains $prediction"
 end
 
 run_server(app, "0.0.0.0", 8000)
